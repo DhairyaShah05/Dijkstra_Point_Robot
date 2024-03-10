@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import time
 import heapq
 from matplotlib.animation import FuncAnimation
- 
 
 # Creating a Class for Node with it's parameters as X,Y Coordinates, Cost at each Node, it's Parent
 class Node:
@@ -216,82 +215,60 @@ def unique_id(node):
 # Dijkstra Algorithm
 
 def dijkstra_algorithm(start, goal, obstacle_space):
-    
-    ## Check if given Node is the Goal Node
-    if check_goal(start, goal):
+    if start.x == goal.x and start.y == goal.y:
         return None, 1
-    
-    # Storing as Nodes only when Start is not Goal
+
     goal_node = goal
     start_node = start
-    
-    # Data Handlers
     unexplored_nodes = {}
     all_nodes = []
-    explored_nodes = {} 
+    explored_nodes = {}
     open_list = []
-    
-    # All possible Movements for a Node
-    possible_moves = ['Up','UpRight','Right','DownRight','Down','DownLeft','Left','UpLeft']
-        
-    # Assigning Unique Key to Start Node
-    start_key = unique_id(start_node)
-    unexplored_nodes[(start_key)] = start_node
-    
-    # Push the Start Node into the Heap Queue
-    heapq.heappush(open_list, [start_node.cost, start_node])
-    
-    # Loops until all the Nodes have been Explored, i.e. until open_list becomes empty
-    while (len(open_list) != 0):
+    possible_moves = ['Up', 'UpRight', 'Right', 'DownRight', 'Down', 'DownLeft', 'Left', 'UpLeft']
 
-        current_node = (heapq.heappop(open_list))[1]
+    start_key = unique_id(start_node)
+    unexplored_nodes[start_key] = start_node
+    heapq.heappush(open_list, [start_node.cost, start_node])
+
+    while open_list:
+        current_node = heapq.heappop(open_list)[1]
         all_nodes.append([current_node.x, current_node.y])
         current_id = unique_id(current_node)
 
-        if check_goal(current_node, goal_node):
+        if current_node.x == goal_node.x and current_node.y == goal_node.y:
             goal_node.parent_node = current_node.parent_node
             goal_node.cost = current_node.cost
             print("Goal Node found")
-            return all_nodes,1
+            return all_nodes, 1
 
         if current_id in explored_nodes:
             continue
         else:
             explored_nodes[current_id] = current_node
-		
+        
         del unexplored_nodes[current_id]
         
-        # Looping through all possible nodes obtained through movements
-        for moves in possible_moves:
-            
-            # New x,y,cost after moving.
-            x,y,cost = move_node(moves, current_node.x, current_node.y, current_node.cost)
-            
-            # Updating Node with the New Values
+        for move in possible_moves:
+            x, y, cost = move_node(move, current_node.x, current_node.y, current_node.cost)
             new_node = Node(x, y, cost, current_node)
-            
-            # New ID
             new_node_id = unique_id(new_node)
             
-            # Checking Validity
-            if not check_valid(new_node.x, new_node.y, obstacle_space):
-                continue
-            elif new_node_id in explored_nodes:
+            if not check_valid(new_node.x, new_node.y, obstacle_space) or new_node_id in explored_nodes:
                 continue
             
-            # Updating Cost and Parent, if lesser cost is found.
             if new_node_id in unexplored_nodes:
                 if new_node.cost < unexplored_nodes[new_node_id].cost: 
                     unexplored_nodes[new_node_id].cost = new_node.cost
                     unexplored_nodes[new_node_id].parent_node = new_node.parent_node
             else:
                 unexplored_nodes[new_node_id] = new_node
-   			
-            # Pushing all the open nodes in Heap Queue to get the least costing node.
-            heapq.heappush(open_list, [ new_node.cost, new_node])
-   
-    return  all_nodes, 0
+            
+            heapq.heappush(open_list, [new_node.cost, new_node])
+    
+    return all_nodes, 0
 
+# Function to Back Track position from Goal Node to Start Node.
+    
 def back_track_path(goal_node):
     
     # Creating a Stack to hold the Backtracked Nodes
@@ -314,80 +291,97 @@ def back_track_path(goal_node):
     
     return x_path, y_path
 
+#This class is used to plot and see the explored nodes.
+
 class PathPlotter:
     def __init__(self, start_node, goal_node, obstacle_space):
         self.start_node = start_node
         self.goal_node = goal_node
         self.obstacle_space = obstacle_space
         
-        ## Plot the Start and Goal Positions
+        # Plot the Start and Goal Positions
         plt.plot(start_node.x, start_node.y, "Db")
         plt.plot(goal_node.x, goal_node.y, "Dg")
         
-        ## Plot Map
+        # Plot Map
         plt.imshow(obstacle_space, "seismic")
         self.ax = plt.gca()
         self.ax.invert_yaxis()
         
-    # Plot the explored nodes
+        # Store explored nodes for batch plotting
+        self.explored_nodes = []
+        self.explored_batch_size = 100  # Adjust batch size as needed
+
     def plot_explored_nodes(self, explored_nodes):
-        explored_x = [node[0] for node in explored_nodes]
-        explored_y = [node[1] for node in explored_nodes]
-        plt.plot(explored_x, explored_y, "3y")
+        self.explored_nodes.extend(explored_nodes)
         
-                 
-    # Plot the shortest path    
+        # Plot in batches for faster performance
+        if len(self.explored_nodes) >= self.explored_batch_size:
+            self._plot_batch()
+
+    def _plot_batch(self):
+        # Convert explored nodes to numpy array for vectorized plotting
+        explored_array = np.array(self.explored_nodes)
+        x_coords, y_coords = explored_array[:, 0], explored_array[:, 1]
+        plt.plot(x_coords, y_coords, "3y")
+        
+        # Clear explored nodes after plotting
+        self.explored_nodes = []
+
     def plot_path(self, x_path, y_path):
-        plt.plot(x_path, y_path)
-        plt.show()
+        plt.plot(x_path, y_path, "--r")
+        # plt.show()
         plt.close('all')
-        
-    # Animate the exploration and path traversal
+
     def animate_exploration_and_path(self, obstacle_space, explored_nodes, x_path, y_path):
         fig, ax = plt.subplots()
-        
+
         # Plot the exploration
-        ax.imshow(obstacle_space, "seismic")
-        ax.plot([node[0] for node in explored_nodes], [node[1] for node in explored_nodes], "3y")
-        
-        # Plot the path
-        line, = ax.plot([], [], 'b-')
-        
+        ax.imshow(obstacle_space, "seismic", origin='lower')  # Set origin to lower for consistency
+
+        # Plot the explored nodes
+        line_explore, = ax.plot([], [], '3y', markersize=2)  # Marker for explored nodes
+
+        # Plot the path line (empty initially)
+        line_path, = ax.plot([], [], '--r', linewidth=2)  # Path line
+
         # Set up the axes properties
         ax.set_xlim(0, 1200)
         ax.set_ylim(0, 500)
-        
+
+        # Find the shorter path
+        shorter_path_length = min(len(x_path), len(y_path))
+
+        # Linearly interpolate the longer path to match the length of the shorter path
+        if len(x_path) > shorter_path_length:
+            x_path_interp = np.interp(np.linspace(0, 1, shorter_path_length), np.linspace(0, 1, len(x_path)), x_path)
+            y_path_interp = np.interp(np.linspace(0, 1, shorter_path_length), np.linspace(0, 1, len(y_path)), y_path)
+        else:
+            x_path_interp, y_path_interp = x_path, y_path
+
         def update(frame):
-            # Update the data of the line for each frame
-            line.set_data(x_path[:frame+1], y_path[:frame+1])
-            return line,
-        
-        # Create the animation
-        ani = FuncAnimation(fig, update, frames=len(x_path), interval=2, blit=True)
-        
-        plt.show()
-    
-    # Animate the path traversal
-    def animate_path(self, obstacle_space, x_path, y_path):
-        fig, ax = plt.subplots()
-        ax.imshow(obstacle_space, "seismic")
-        line, = ax.plot([], [], 'b-')
-        
-        # Set up the axes properties
-        ax.set_xlim(0, max(x_path))
-        ax.set_ylim(0, max(y_path))
-        
-        def update(frame):
-            # Update the data of the line for each frame
-            line.set_data(x_path[:frame+1], y_path[:frame+1])
-            return line,
-        
-        # Create the animation
-        ani = FuncAnimation(fig, update, frames=len(x_path), interval=2, blit=True)
-        
+            # Plot the path line frame by frame
+            if frame < shorter_path_length:
+                line_path.set_data(x_path_interp[:frame + 1], y_path_interp[:frame + 1])
+            else:
+                line_path.set_data([], [])
+
+            # Plot explored nodes if it's a multiple of 20 or if it's the last frame
+            if frame % 500 == 0 or frame == shorter_path_length - 1:
+                if frame < len(explored_nodes):
+                    line_explore.set_data([node[0] for node in explored_nodes[:frame + 1]],
+                                        [node[1] for node in explored_nodes[:frame + 1]])
+                else:
+                    line_explore.set_data([], [])
+
+            return line_explore, line_path
+
+        # Create the animation with frames equal to the length of the shorter path
+        ani = FuncAnimation(fig, update, frames=shorter_path_length, interval=5, blit=True)
         plt.show()
 
 # Main Function to Execute the Program
+
 if __name__ == '__main__':
     
     # Robot Space width and Height
@@ -432,9 +426,9 @@ if __name__ == '__main__':
         
         # Plotting the Map, Obstacles and the Generated Path
         plotter = PathPlotter(start_node, goal_node, obstacle_space)
-        # plotter.plot_explored_nodes(explored_nodes)
-        # plotter.plot_path(x_path, y_path)
-        # plotter.animate_path(x_path, y_path)
+        plotter.plot_explored_nodes(explored_nodes)
+        plotter.plot_path(x_path, y_path)
+        # plotter.animate_exploration_only(obstacle_space,explored_nodes)
         plotter.animate_exploration_and_path(obstacle_space, explored_nodes, x_path, y_path)
         cost = goal_node.cost
         print(f"Cost of reaching the goal: {cost:.2f}")
@@ -444,6 +438,3 @@ if __name__ == '__main__':
     # Stopping the Timer after Program Execution
     end_time = time.time()
     print(f"Time Taken to Execute the Program is: {end_time - start_time}")
-
-
-
