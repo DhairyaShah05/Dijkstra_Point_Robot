@@ -1,9 +1,9 @@
+# Importing Necessary Libraries
 import numpy as np
 import matplotlib.pyplot as plt 
 
 class Node:
-    
-    # Initialize Data
+
 	def __init__(self, x, y, cost, parent_node):
 
 		self.x = x
@@ -11,7 +11,6 @@ class Node:
 		self.cost = cost
 		self.parent_node = parent_node
 	
-    # To support Node Comparision
 	def __lt__(self,other):
 		return self.cost < other.cost
 
@@ -58,21 +57,21 @@ def move_downleft(x,y,cost):
 	y -= 1
 	cost += np.sqrt(2)
 	return x,y,cost
-
+    
 def move_node(move,x,y,cost):
-    if move == 'Up': 
+    if move == 'Up':    # Move up
         return move_up(x,y,cost)
-    elif move == 'UpRight':   
+    elif move == 'UpRight':    # Move upright
         return move_upright(x,y,cost)
-    elif move == 'Right':   
+    elif move == 'Right':    # Move right
         return move_right(x,y,cost)
-    elif move == 'DownRight':   
+    elif move == 'DownRight':    # Move downright
         return move_downright(x,y,cost)
-    elif move == 'Down':   
+    elif move == 'Down':    # Move down
         return move_down(x,y,cost)
-    elif move == 'DownLeft':    
+    elif move == 'DownLeft':    # Move downleft
         return move_downleft(x,y,cost)
-    elif move == 'Left':    
+    elif move == 'Left':    # Move left
         return move_left(x,y,cost)
     elif move == 'UpLeft':    # Move upleft
         return move_upleft(x,y,cost)
@@ -85,3 +84,95 @@ def check_goal(current, goal):
 		return True
 	else:
 		return False
+
+def plot_map(width, height):
+    
+    obstacle_space = np.full((height, width),0)
+    
+    for y in range(0, height) :
+        for x in range(0, width):
+            
+            r11_buffer = (x + 5) - 100  
+            r12_buffer = (y + 5) - 100
+            r13_buffer = (x - 5) - 175
+            r14_buffer = (y - 5) - 500
+            
+            # Rectangle 2 Obastacle
+            r21_buffer = (x + 5) - 275  
+            r22_buffer = (y + 5) - 0
+            r23_buffer = (x - 5) - 350
+            r24_buffer = (y - 5) - 400 
+            
+            # Hexagon Obstacle
+            h6_buffer = (y + 5) +  0.58*(x + 5) - 431.82
+            h5_buffer = (y + 5) + 0.58*(x - 5) - 231.72
+            h4_buffer = (x - 6.5) - 704.9
+            h3_buffer = (y - 5) + 0.58*(x - 5) - 731.78
+            h2_buffer = (y - 5) - 0.58*(x + 5) - 68.23
+            h1_buffer = (x + 6.5) - 445.1
+            
+            # Block Obstacle
+            t1_buffer = (x + 5) - 900
+            t2_buffer = (x + 5) - 1020
+            t3_buffer = (x - 5) - 1100
+            t4_buffer = (y + 5) - 50
+            t5_buffer = (y - 5) - 125
+            t6_buffer = (y + 5) - 375
+            t7_buffer = (y - 5) - 450
+            
+            if((t1_buffer>0 and t2_buffer<0 and t4_buffer>0 and t5_buffer<0) or(t2_buffer>0 and t3_buffer<0 and t4_buffer>0 and t7_buffer<0) or (t6_buffer>0 and t7_buffer<0 and t1_buffer>0 and t2_buffer<0) or (r11_buffer>0 and r12_buffer>0 and r13_buffer<0 and r14_buffer<0) or (r21_buffer>0 and r23_buffer<0 and r24_buffer<0 and r22_buffer>0) or (h6_buffer<0 and h5_buffer>0 and h4_buffer>0 and h3_buffer>0 and h2_buffer>0 and h1_buffer<0)):
+                obstacle_space[y, x] = 1
+            
+            w1 = (y) - 5
+            w2 = (y) - 495
+            w3 = (x) - 5
+            w4 = (x) - 1195 
+            
+            r11 = (x) - 100  
+            r12 = (y) - 100
+            r13 = (x) - 175
+            r14 = (y) - 500
+            
+            r21 = (x) - 275  
+            r22 = (y) - 0
+            r24 = (x) - 350
+            r23 = (y) - 400 
+            
+            h6 = (y) +  0.58*(x) - 431.82
+            h5 = (y) - 0.58*(x) + 231.72
+            h4 = (x) - 704.9
+            h3 = (y) + 0.58*(x) - 731.78
+            h2 = (y) - 0.58*(x) - 68.23
+            h1 = (x) - 445.1 
+            
+            t1 = (x) - 900
+            t2 = (x) - 1020
+            t3 = (x) - 1100
+            t4 = (y) - 50
+            t5 = (y) - 125
+            t6 = (y) - 375
+            t7 = (y) - 450
+
+            if((h6>0 and h5>0 and h4<0 and h3<0 and h2<0 and h1>0) or (r11>0 and r12>0 and r13<0 and r14<0 ) or (r21>0  and r23<0 and r24<0 and r22>0) or (t1>0 and t2<0 and t4>0 and t5<0) or (t2>0 and t3<0 and t4>0 and t7<0) or (t6>0 and t7<0 and t1>0 and t2<0) or (w1<0) or (w2>0) or (w3<0) or (w4>0)):
+                obstacle_space[y, x] = 2    
+
+    return obstacle_space
+
+width = 500
+height = 500
+obstacle_space = plot_map(width, height)
+
+def check_valid(x, y, obstacle_space):
+    
+	size = obstacle_space.shape
+    
+	if( x > size[1] or x < 0 or y > size[0] or y < 0 ):
+		return False
+    
+	else:
+		try:
+			if(obstacle_space[y][x] == 1) or (obstacle_space[y][x] == 2):
+				return False
+		except:
+			pass
+	return True
